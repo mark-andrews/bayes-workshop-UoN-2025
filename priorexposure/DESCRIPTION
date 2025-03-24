@@ -1,0 +1,23 @@
+Package: priorexposure
+Title: Some functions for illustrating Bayesian Data Analysis
+Version: 0.0.1
+Authors@R: 
+    person(given = "Mark",
+           family = "Andrews",
+           role = c("aut", "cre"),
+           email = "mark.andrews@ntu.ac.uk")
+Description: Provide some simple functions for illustrating Bayesian data analysis.
+    It primarily provides functions for Bayesian inference of coin toss data.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports: 
+    dplyr,
+    magrittr,
+    ggplot2,
+    tibble,
+    latex2exp
+Suggests: 
+    testthat
