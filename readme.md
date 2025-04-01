@@ -7,3 +7,7 @@ It then introduces how to do Bayesian modelling in R using the [brms](https://pa
 ## Software
 
 Instructions on how to install the necessary software are [here](software.md).
+
+## Slides
+
+Slides are [here](https://mark-andrews.github.io/bayes-workshop-UoN-2025/).
