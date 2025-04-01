@@ -1,0 +1,19 @@
+/* Make the font smaller across all slides */
+.reveal section {
+  font-size: 80%; /* Adjust to taste */
+  max-width: 100%; /* Make the slide narrower so text fits */
+}
+
+/* Optionally adjust heading sizes specifically */
+.reveal section h1 {
+  font-size: 2em; 
+}
+.reveal section h2 {
+  font-size: 1.6em;
+}
+
+.reveal section img {
+    background: none;
+    border: none;
+    box-shadow: none;
+}

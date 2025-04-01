@@ -1,0 +1,176 @@
+---
+title: "Introducing Bayesian Data Analysis"
+header-includes:
+  - \newcommand{\data}{\mathcal{D}}
+  - \newcommand{\Prob}[1]{\mathrm{P}(#1)}
+  - \newcommand{\given}{\vert}
+output:
+  revealjs::revealjs_presentation:
+    theme: serif
+    transition: fade
+    css: "style.css"
+author: |
+  | Mark Andrews
+  | 
+  | `r fontawesome::fa("github")` [mark-andrews/bayes-workshop-UoN-2025](https://github.com/mark-andrews/bayes-workshop-UoN-2025) https://tinyurl.com/2e3apksr
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+```{r, echo=FALSE}
+library(tidyverse)
+```
+
+
+## Overview of workshop
+
+* What is Bayesian data analysis?
+* Bayesian inference using an analytic solution: worked example
+* Analytic solutions are a dead end; why we need MCMC
+* (briefly) Introduce probabilistic programming languages like Stan
+* Flexible MCMC Bayesian modelling in R with `brms` (and Stan): worked examples
+
+## What is Bayesian data analysis? In a nutshell {.smaller}
+
+
+* All statistical analysis begins with data $\data$, which is often divided into two parts $\data = \{y, x\}$, where $y$ the observed values of some vector random variable $Y$ and $x$ is treated as fixed explanatory vector.
+* We then propose or assume a statistical model (i.e. a probabilistic model) for $\data$ such as for example, $\Prob{y\given x, \beta, \sigma}$, defined as
+$$
+\begin{align}
+\text{for $i \in 1...n$,}\quad y_i \sim N(\mu_i, \sigma^2), \quad\mu_i = \beta_0 + \sum_{k=1}^K \beta_{k} x_{ki}.
+\end{align}
+$$
+* In this model, $\beta$ and $\sigma$ are unknown and we infer their values using statistical inference.
+* There is two main types statistical inference: sampling theory based inference (aka classical or frequentist inference) and Bayesian inference.
+
+
+## What is Bayesian data analysis? In a nutshell {.smaller}
+
+* Sampling theory based inference calculates estimators of the unknowns and calculates the estimators' sampling distributions under hypothetical true values of these unknowns.
+* This leads to p-values, confidence intervals, etc.
+* Bayesian inference uses Bayes's rule to calculate the posterior probability distribution over the unknowns conditional on the observed data $\data$ and the assumed model: $\Prob{\textsf{unknowns} \given \textsf{data}, \textsf{model}}$, e.g. $\Prob{\beta, \sigma\given \data, \mathcal{M}}$.
+* In general, the posterior distribution gives us the probability distribution over the unknown variables conditional of what is known or assumed.
+* It is calculated by Bayes's rule:
+$$
+\begin{align}
+\Prob{\textsf{unknowns} &\given \textsf{data}, \textsf{model}} \\
+\quad &\propto \Prob{\textsf{data} \given \textsf{unknowns}, \textsf{model}} \Prob{\textsf{unknowns} \given \textsf{model}}
+\end{align}
+$$
+E.g. 
+$$
+\Prob{\beta, \sigma\given \data, \mathcal{M}} \propto
+\Prob{y \given x, \beta, \sigma, \mathcal{M}} \Prob{\beta, \sigma\given \mathcal{M}}.
+$$
+
+## Bayesian inference: Worked example
+
+* In early 2020, the infection fatality ratio (IFR) of the novel coronavirus in Asia is unknown.
+* In late January, on the quarantined *Diamond Princess* ship, $n=712$ were infected and $m=14$ died.
+* On the basis of this information, what is the IFR?
+* First, we must propose or assume a statistical model. 
+* A very simple (and obviously wrong, but still potentially useful) model is 
+$$
+m \sim \textrm{Binomial}(\theta, n).
+$$
+
+
+## Bayesian inference: Worked example
+
+* Having chosen the statistical model, this determines the likelihood function:
+$$
+L(\theta\given n,m) \propto \Prob{m \given \theta, n} = \binom{n}{m} \theta^m (1-\theta)^{n-m}.
+$$
+```{r, fig.align='center', out.width="50%"}
+library(priorexposure)
+bernoulli_likelihood(n = n, m = m) + xlim(0, 0.1)
+```
+
+
+## Bayesian inference: Worked example
+
+* Next, we must propose or assume a prior for the unknown parameter, $\theta$, in this model. 
+* One choice is the conjugate prior
+$$
+\theta \sim \textrm{Beta}(\alpha, \beta)
+$$
+with $\alpha$ and $\beta$, the *hyperparameters* chosen to reflect different assumptions.
+```{r, fig.align='center', out.width="50%"}
+beta_plot(3, 10) # for example
+```
+
+
+## Bayesian inference: Worked example
+
+* Given $m$ fatalities in $n$ cases, and Beta distribution prior hyperparameters $\alpha$ and $\beta$, the posterior over $\theta$ is then 
+$$
+\textrm{Beta}(m + \alpha, n -m + \beta),
+$$
+* This is from
+$$
+\begin{aligned}
+  \Prob{\theta \given m, n, \alpha,\beta} &= \frac{\Prob{m\given\theta,n}\Prob{\theta\given\alpha,\beta}}{\int\Prob{m\given\theta,n}\Prob{\theta\given\alpha,\beta}\ d\theta},\\
+  &\propto \overbrace{\theta^{m} (1-\theta)^{n-m}}^{\text{likelihood}} \times \overbrace{\theta^{\alpha-1}(1 - \theta)^{\beta-1}}^{\text{prior}},\\
+  &\propto \theta^{m + \alpha-1}(1 - \theta)^{n-m+\beta-1},\\
+  &= \textrm{Beta}(m + \alpha, n - m + \beta).
+\end{aligned}
+$$
+
+where the normalizing constant is the reciprocal of the beta function 
+
+$$
+\begin{aligned}
+   \frac{\Gamma(m + \alpha)\Gamma(n - m + \beta)}{\Gamma(n + \alpha+\beta)} &= \int \theta^{\alpha + m - 1} (1-\theta)^{ \beta + n - m - 1}\ d\theta.
+\end{aligned}
+$$
+
+
+## Bayesian inference: Worked example
+
+- The mean, variance and modes of any Beta distribution are as follows: 
+  $$
+  \begin{aligned}
+   \langle \theta \rangle &=\frac{\alpha}{\alpha+\beta} ,\\
+   \mathrm{V}(\theta) &= \frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)},\\
+   \textrm{mode}(\theta) &= \frac{\alpha-1}{\alpha+\beta-2}.
+  \end{aligned}
+  $$
+```{r}
+bernoulli_posterior_summary(n, m, alpha = 1, beta = 10)
+```
+
+
+## Bayesian inference: Worked example
+
+- Posterior intervals, such the High Posterior Density (HPD) interval or the quantile interval, provide ranges that contain specified probability mass.
+  For example, the 0.95 interval is the range of values that contain 0.95 of the probability mass of the distribution.
+
+- The $\varphi$ HPD interval for the probability density function $\Prob{x}$ is computed by finding a probability density value $p^*$ such that $$\Prob{\{x \colon \Prob{x} \geq p^*\}} = \varphi.$$
+
+- In other words, we find the value $p^*$ such that the probability mass of the set of points whose density is greater than than $p^*$ is exactly $\varphi$.
+
+- The $\varphi$ quantile interval ranges from the $(1-\varphi)/2$ percentile to the $\varphi + (1-\varphi)/2$ percentile.
+
+- In general, the HPD is not trivial to compute. The quantile interval is easily computed from the cumulative density function. If the posterior is symmetric, the HPD and the quantile interval are identical.
+
+
+## Posterior sampling by MCMC
+
+- In general, if we can evaluate the likelihood $\Prob{\data\given\theta}$ and the prior $\Prob{\theta}$ at every possible value of parameter space, we can draw samples from the posterior distribution $\Prob{\theta\given\data}$.
+
+-   Let us denote the posterior $\Prob{\theta\given \data}$ by $f(\theta)$.
+
+-   We sample from a symmetric *proposal* distribution
+    $Q(\cdot\vert\cdot)$.
+
+-   We start with an initial $\tilde{\theta}_0$, and sample $\tilde{\theta} \sim Q(\theta\vert\tilde{\theta}_0)$.
+
+-   We then accept $\tilde{\theta}$ with probability
+    $$\alpha = \min\left(1.0, \frac{f(\tilde{\theta})}{f(\tilde{\theta}_0)}\right).$$
+
+-   After convergence, the accepted samples are draws from the
+    distribution $f(\theta)$.
+
+-  For this sampling, the distribution $f(\theta)$ need be known only up to a proportional constant.
